@@ -76,19 +76,19 @@ It's the best of both worlds — RAM speed when nothing changed, instant pickup 
 ### Full Feature Comparison
 
 | Feature | zeno-blade | Tera | Notes |
-|---|:---:|:---:|
-| 🔥 **Hot reload (auto, per-file)** | ✅ | ❌ | Tera requires `full_reload()` — nukes all cache |
-| 🎨 **Laravel Blade syntax** | ✅ | ❌ | Tera uses Jinja2/Django-like syntax |
-| 🧩 **`<x-component>` HTML components** | ✅ | ❌ | Tera has no component system |
-| 📐 **`@extends` / `@section` / `@yield`** | ✅ | ✅ | Both support layout inheritance |
-| 🔁 **`@forelse` / `@empty`** | ✅ | ❌ | Tera has no forelse equivalent |
-| 🎯 **`@class(['x' => $cond])`** | ✅ | ❌ | Conditional classes, Laravel-style |
-| 🔐 **`@csrf` / `@method`** | ✅ | ❌ | Tera has no form helpers |
-| 🧠 **Scripting runtime (ZenoLang)** | ✅ | ❌ | zeno-blade ships with a full scripting layer |
-| 🔌 **Custom slot/handler system** | ✅ | ❌ | Register Rust functions callable from templates |
-| 📄 **Built-in OpenAPI/Swagger** | ✅ | ❌ | Bundled in `zeno-rs` workspace |
+|---|:---:|:---:|---|
+| 🔥 **Hot reload — auto, per-file** | ✅ | ❌ | Tera: call full_reload() to nuke entire cache |
+| 🎨 **Laravel Blade syntax** | ✅ | ❌ | Tera uses Jinja2 / Django-like syntax |
+| 🧩 **HTML components (<x-component>)** | ✅ | ❌ | Tera has no component system |
+| 📐 **Layout inheritance (@extends)** | ✅ | ✅ | Both support @extends / @section / @yield |
+| 🔁 **Loop with empty fallback (@forelse)** | ✅ | ❌ | No forelse equivalent in Tera |
+| 🎯 **Conditional CSS classes (@class)** | ✅ | ❌ | Laravel-style @class directive |
+| 🔐 **Form helpers (@csrf, @method)** | ✅ | ❌ | Tera has no form helpers |
+| 🧠 **Embedded scripting (ZenoLang)** | ✅ | ❌ | Full scripting runtime built-in |
+| 🔌 **Custom handler / slot system** | ✅ | ❌ | Register Rust functions callable from templates |
+| 📄 **Built-in OpenAPI / Swagger UI** | ✅ | ❌ | Bundled in the zeno-rs workspace |
 | 🛡️ **Zero unsafe code in core** | ✅ | ✅ | Both are memory-safe |
-| 📦 **Maturity / community** | 🆕 | ✅ | Tera has a larger community |
+| 📦 **Maturity / ecosystem** | 🆕 | ✅ | Tera has a larger community — honest trade-off |
 
 ### Syntax: What You Already Know vs What You'd Have to Learn
 
