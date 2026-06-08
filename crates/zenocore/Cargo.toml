@@ -2,6 +2,15 @@
 name = "zenocore"
 version = "0.1.0"
 edition = "2024"
+description = "Zero-dependency core engine for ZenoLang — lexer, parser, executor, and scope for the zeno-rs ecosystem"
+license = "Apache-2.0"
+authors = ["NextCore <github.com/nextcore>"]
+repository = "https://github.com/nextcore/zeno-rs"
+homepage = "https://github.com/nextcore/zeno-rs"
+documentation = "https://docs.rs/zenocore"
+readme = "../../README.md"
+keywords = ["template", "scripting", "engine", "blade", "zeno"]
+categories = ["template-engine", "parser-implementations", "web-programming"]
 
 [dependencies]
-# Zero dependencies
+# Zero dependencies — intentional

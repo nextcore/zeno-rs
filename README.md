@@ -2,7 +2,8 @@
 
 <img src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white" />
 <img src="https://img.shields.io/badge/version-0.1.0-orange?style=for-the-badge" />
-<img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" />
+<img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=for-the-badge" />
+<img src="https://img.shields.io/badge/crates.io-published-fc8d62?style=for-the-badge&logo=rust" />
 <img src="https://img.shields.io/badge/tests-passing-brightgreen?style=for-the-badge" />
 <img src="https://img.shields.io/badge/unsafe-0%25-success?style=for-the-badge" />
 <img src="https://img.shields.io/badge/Blade-compatible-blueviolet?style=for-the-badge" />
@@ -150,9 +151,11 @@ zeno-rs/
 
 ```toml
 [dependencies]
-zenoengine = { git = "https://github.com/nextcore/zeno-rs" }
-zeno-blade  = { git = "https://github.com/nextcore/zeno-rs" }
+zenoengine = "0.1"   # batteries-included facade
+zeno-blade  = "0.1"  # or just the Blade engine, if you don't need the full stack
 ```
+
+All crates are published on **[crates.io](https://crates.io)**. No git URLs needed.
 
 ### Step 2 — Point it at your existing views directory
 

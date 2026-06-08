@@ -2,6 +2,15 @@
 name = "zeno-blade"
 version = "0.1.0"
 edition = "2024"
+description = "Laravel Blade-compatible template engine for Rust — hot reload, HTML components, @extends, @forelse, @csrf, @class, and more"
+license = "Apache-2.0"
+authors = ["NextCore <github.com/nextcore>"]
+repository = "https://github.com/nextcore/zeno-rs"
+homepage = "https://github.com/nextcore/zeno-rs"
+documentation = "https://docs.rs/zeno-blade"
+readme = "../../README.md"
+keywords = ["blade", "template", "laravel", "html", "web"]
+categories = ["template-engine", "web-programming", "rendering"]
 
 [dependencies]
-zenocore = { path = "../zenocore" }
+zenocore = { path = "../zenocore", version = "0.1.0" }

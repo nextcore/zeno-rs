@@ -2,9 +2,18 @@
 name = "zeno-std"
 version = "0.1.0"
 edition = "2024"
+description = "Standard library for zeno-rs — math, date, string, and money utilities for ZenoLang templates"
+license = "Apache-2.0"
+authors = ["NextCore <github.com/nextcore>"]
+repository = "https://github.com/nextcore/zeno-rs"
+homepage = "https://github.com/nextcore/zeno-rs"
+documentation = "https://docs.rs/zeno-std"
+readme = "../../README.md"
+keywords = ["zeno", "template", "stdlib", "date", "math"]
+categories = ["template-engine", "web-programming"]
 
 [dependencies]
-zenocore = { path = "../zenocore" }
+zenocore = { path = "../zenocore", version = "0.1.0" }
 chrono = { version = "0.4", features = ["alloc"] }
 rust_decimal = "1.34"
 evalexpr = "8.1"

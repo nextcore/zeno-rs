@@ -2,6 +2,15 @@
 name = "zeno-apidoc"
 version = "0.1.0"
 edition = "2024"
+description = "OpenAPI 3.0 spec generator and Swagger UI for the zeno-rs ecosystem — auto-document your Rust web API"
+license = "Apache-2.0"
+authors = ["NextCore <github.com/nextcore>"]
+repository = "https://github.com/nextcore/zeno-rs"
+homepage = "https://github.com/nextcore/zeno-rs"
+documentation = "https://docs.rs/zeno-apidoc"
+readme = "../../README.md"
+keywords = ["openapi", "swagger", "api", "documentation", "web"]
+categories = ["web-programming", "development-tools"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
