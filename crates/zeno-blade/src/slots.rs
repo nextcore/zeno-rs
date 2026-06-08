@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::path::Path;
+use std::time::SystemTime;
 use zenocore::{Engine, Node, Scope, SlotMeta, Diagnostic, Value};
 
 use crate::transpiler::transpile_blade_native;
@@ -13,12 +14,19 @@ pub struct SectionMap(pub Arc<Mutex<HashMap<String, Node>>>);
 #[derive(Clone)]
 pub struct StackMap(pub Arc<Mutex<HashMap<String, Vec<Node>>>>);
 
-static BLADE_CACHE: OnceLock<Mutex<HashMap<String, Node>>> = OnceLock::new();
+struct CacheEntry {
+    node: Node,
+    mtime: SystemTime,
+}
 
-fn get_blade_cache() -> &'static Mutex<HashMap<String, Node>> {
+static BLADE_CACHE: OnceLock<Mutex<HashMap<String, CacheEntry>>> = OnceLock::new();
+
+fn get_blade_cache() -> &'static Mutex<HashMap<String, CacheEntry>> {
     BLADE_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Clears the entire in-memory template cache.
+/// All templates will be re-read from disk and re-parsed on the next request.
 pub fn clear_blade_cache() {
     if let Some(cache) = BLADE_CACHE.get() {
         let mut guard = cache.lock().unwrap();
@@ -26,21 +34,38 @@ pub fn clear_blade_cache() {
     }
 }
 
+/// Returns the cached AST if the file has not changed since last parse,
+/// otherwise re-reads from disk, re-parses, and updates the cache.
+/// This provides hot reload by default: RAM-fast when unchanged, auto-refresh when modified.
 fn get_cached_or_parse(full_path: &str) -> Result<Node, String> {
-    let cache = get_blade_cache();
+    // Fetch current mtime before acquiring the lock
+    let current_mtime = std::fs::metadata(full_path)
+        .and_then(|m| m.modified())
+        .ok();
+
     {
-        let guard = cache.lock().unwrap();
-        if let Some(node) = guard.get(full_path) {
-            return Ok(node.clone());
+        let guard = get_blade_cache().lock().unwrap();
+        if let Some(entry) = guard.get(full_path) {
+            let is_fresh = current_mtime.map_or(false, |cur| cur == entry.mtime);
+            if is_fresh {
+                return Ok(entry.node.clone()); // serve from RAM
+            }
         }
     }
 
+    // Cache miss or file changed — read from disk and re-parse
     let content = std::fs::read_to_string(full_path)
         .map_err(|e| format!("view not found: {}. Error: {}", full_path, e))?;
     let node = transpile_blade_native(&content, full_path)?;
 
-    let mut guard = cache.lock().unwrap();
-    guard.insert(full_path.to_string(), node.clone());
+    // Re-read mtime after parsing to capture the exact mtime of the content we just read
+    let mtime = std::fs::metadata(full_path)
+        .and_then(|m| m.modified())
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+
+    let mut guard = get_blade_cache().lock().unwrap();
+    guard.insert(full_path.to_string(), CacheEntry { node: node.clone(), mtime });
+
     Ok(node)
 }
 

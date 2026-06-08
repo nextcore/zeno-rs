@@ -3,117 +3,164 @@
 <img src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white" />
 <img src="https://img.shields.io/badge/version-0.1.0-orange?style=for-the-badge" />
 <img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" />
-<img src="https://img.shields.io/badge/tests-26%20passing-brightgreen?style=for-the-badge" />
+<img src="https://img.shields.io/badge/tests-passing-brightgreen?style=for-the-badge" />
 <img src="https://img.shields.io/badge/unsafe-0%25-success?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Blade-compatible-blueviolet?style=for-the-badge" />
+<img src="https://img.shields.io/badge/hot%20reload-built--in-ff6b35?style=for-the-badge" />
 
 # ⚡ zeno-rs
 
-### The Blazing-Fast Embedded Scripting & Blade Templating Engine for Rust
+### Your Laravel Blade Templates. Now Running in Rust.
 
-> Write logic. Render views. Ship faster.  
-> Drop-in Blade templating + a full scripting runtime — embedded directly in your Rust app.
+> You already know `@if`, `@foreach`, `@extends`, `{{ $var }}`, and `<x-component>`.  
+> **You don't need to learn a new template language. You need a faster runtime.**
 
-[Getting Started](#-quick-start) · [Blade Directives](#-blade-directives) · [Components](#-html-components) · [Examples](#-axum-example)
+[Why Switch?](#-why-leave-php) · [vs Tera](#-zeno-blade-vs-tera--why-blade-wins) · [Quickstart](#-2-minute-migration) · [Blade Reference](#-blade-directives) · [Components](#-html-components) · [Hot Reload](#%EF%B8%8F-template-loading--hot-reload)
 
 </div>
 
 ---
 
-## Why zeno-rs?
+## 🤔 Why Leave PHP?
 
-Most Rust template engines give you one thing: a way to interpolate variables into HTML. **zeno-rs gives you a complete runtime.**
+You love Laravel. The DX is excellent, the ecosystem is mature, and Blade is genuinely good.  
+But at some point, every Laravel project hits the same wall:
 
-| | zeno-rs | Tera | Handlebars | MiniJinja |
-|---|:---:|:---:|:---:|:---:|
-| Blade-compatible syntax | ✅ | ❌ | ❌ | ❌ |
-| HTML components (`<x-component>`) | ✅ | ❌ | ❌ | ❌ |
-| Embedded scripting runtime | ✅ | ❌ | ❌ | ❌ |
-| Layout inheritance (`@extends`) | ✅ | ✅ | ❌ | ✅ |
-| Zero unsafe code in core | ✅ | ✅ | ✅ | ✅ |
-| Custom slot/handler system | ✅ | ❌ | ❌ | ❌ |
-| Built-in OpenAPI/Swagger docs | ✅ | ❌ | ❌ | ❌ |
+| Problem | PHP/Laravel | zeno-rs (Rust) |
+|---|---|---|
+| Memory per request | ~20–50 MB (FPM workers) | ~2–5 MB (single binary) |
+| Cold start | Opcache warm-up required | Instant — binary is pre-compiled |
+| Concurrency | Process-per-request (FPM) or Swoole | Native async with Tokio / Axum |
+| Deployment | PHP runtime + Composer + env | Single static binary, zero deps |
+| Template syntax | Laravel Blade | **Identical Blade syntax** ✅ |
 
-If you're building a web application in Rust and want **Laravel-grade templating power** without the PHP overhead — this is it.
+The catch with every other Rust web framework: **you have to throw away your templates.**  
+Tera, Handlebars, MiniJinja — none of them speak Blade.
 
----
-
-## ✨ Features
-
-- 🎨 **Full Blade Syntax** — `@if`, `@foreach`, `@forelse`, `@extends`, `@section`, `@yield`, `@include`, `@push`, `@stack`, `@class`, `@method`, `@csrf` and more
-- 🧩 **HTML Components** — `<x-alert>`, `<x-card>` with named slots, dynamic props, and isolated scopes
-- ⚡ **ZenoLang Scripting** — Built-in expression language with variables, loops, functions, try/catch, switch, and pattern matching
-- 🔌 **Pluggable Slots** — Register your own handlers in pure Rust and call them from templates
-- 📄 **OpenAPI Generator** — Auto-generate API documentation from your routes
-- 🛡️ **Zero External Deps in Core** — `zenocore` compiles with zero dependencies
-- 🧪 **Production Tested** — Full test suite covering transpiler, executor, and slot behavior
+**zeno-rs does.** Your `.blade.zl` files work as-is.
 
 ---
 
-## 📦 Workspace
+## 🆚 zeno-blade vs Tera — Why Blade Wins
+
+Tera is the most popular Rust template engine. It's solid, well-documented, and widely used.  
+But if you're a Laravel developer — or if you care about developer experience — it falls short in ways that matter every day.
+
+### The Hot Reload Problem (This Is the Big One)
+
+Here's what your workflow looks like when you change a template:
+
+**With Tera:**
+```rust
+// Option A: Restart the server every time.
+// Option B: Call full_reload() — which re-reads and re-parses EVERY template.
+tera.full_reload()?; // ← nukes the entire cache, re-parses all files
+```
+Tera has no per-file invalidation. Change one file → invalidate everything → re-parse everything.  
+On a project with 50+ templates, this adds latency to every dev refresh.
+
+**With zeno-blade:**
+```
+Edit one template → Save → Refresh browser
+
+✅ Only that one file is re-parsed (mtime check = 1 syscall)
+✅ Every other template stays in RAM untouched
+✅ Zero manual reload call needed
+✅ Zero restart needed
+```
+
+zeno-blade uses **mtime-based per-file cache invalidation**:  
+check the file's last-modified timestamp on every request, re-parse only when it changes.  
+It's the best of both worlds — RAM speed when nothing changed, instant pickup when you saved.
+
+### Full Feature Comparison
+
+| Feature | zeno-blade | Tera | Notes |
+|---|:---:|:---:|
+| 🔥 **Hot reload (auto, per-file)** | ✅ | ❌ | Tera requires `full_reload()` — nukes all cache |
+| 🎨 **Laravel Blade syntax** | ✅ | ❌ | Tera uses Jinja2/Django-like syntax |
+| 🧩 **`<x-component>` HTML components** | ✅ | ❌ | Tera has no component system |
+| 📐 **`@extends` / `@section` / `@yield`** | ✅ | ✅ | Both support layout inheritance |
+| 🔁 **`@forelse` / `@empty`** | ✅ | ❌ | Tera has no forelse equivalent |
+| 🎯 **`@class(['x' => $cond])`** | ✅ | ❌ | Conditional classes, Laravel-style |
+| 🔐 **`@csrf` / `@method`** | ✅ | ❌ | Tera has no form helpers |
+| 🧠 **Scripting runtime (ZenoLang)** | ✅ | ❌ | zeno-blade ships with a full scripting layer |
+| 🔌 **Custom slot/handler system** | ✅ | ❌ | Register Rust functions callable from templates |
+| 📄 **Built-in OpenAPI/Swagger** | ✅ | ❌ | Bundled in `zeno-rs` workspace |
+| 🛡️ **Zero unsafe code in core** | ✅ | ✅ | Both are memory-safe |
+| 📦 **Maturity / community** | 🆕 | ✅ | Tera has a larger community |
+
+### Syntax: What You Already Know vs What You'd Have to Learn
+
+```html
+<!-- Tera — Jinja2-style, new syntax to learn -->
+{% for post in posts %}
+  {% if post.featured %}
+    <article>{{ post.title | upper }}</article>
+  {% endif %}
+{% else %}
+  <p>No posts.</p>
+{% endfor %}
+```
+
+```html
+{{-- zeno-blade — Laravel Blade, you already know this --}}
+@forelse($posts as $post)
+  @if($post_featured)
+    <article>{{ $post }}</article>
+  @endif
+@empty
+  <p>No posts.</p>
+@endforelse
+```
+
+If you've written a single Laravel view, you already know how to write zeno-blade templates.
+
+> [!NOTE]
+> Tera is an excellent library and the right choice if you're not coming from a Blade background.  
+> If you **are** — zeno-blade gives you Laravel's template DX at Rust's performance level.
+
+---
+
+## 🔥 What Exactly Is This?
+
+**`zeno-rs`** is a Rust workspace (monorepo) containing:
 
 ```
 zeno-rs/
 ├── crates/
-│   ├── zenocore/        # 🔩 Core: lexer, parser, executor, scope — zero dependencies
-│   ├── zeno-blade/      # 🎨 Blade transpiler + HTML component executor
+│   ├── zenocore/        # 🔩 Core engine: lexer, parser, executor, scope — zero dependencies
+│   ├── zeno-blade/      # 🎨 THE Blade engine — transpiles .blade.zl → AST → HTML
 │   ├── zeno-std/        # 🧰 Standard library: math, date, string, money
 │   ├── zeno-apidoc/     # 📄 OpenAPI 3.0 spec + Swagger UI
-│   └── zenoengine/      # 📦 Batteries-included facade
+│   └── zenoengine/      # 📦 Batteries-included facade (start here)
 └── examples/
-    └── web_server/      # 🚀 Axum example with Swagger UI
+    └── web_server/      # 🚀 Full Axum web server, ready to run
 ```
+
+> **`zeno-blade`** is the star of the show — a full Blade engine living inside `zeno-rs`.  
+> It is the Rust sibling of [`nextcore/zeno-go`](https://github.com/nextcore/zeno-go), the original Go implementation.  
+> Templates are **100% portable** between Go and Rust backends.
 
 ---
 
-## 🚀 Quick Start
+## ⚡ 2-Minute Migration
 
-### Installation
+### Step 1 — Add to `Cargo.toml`
 
 ```toml
-# Cargo.toml
 [dependencies]
 zenoengine = { git = "https://github.com/nextcore/zeno-rs" }
+zeno-blade  = { git = "https://github.com/nextcore/zeno-rs" }
 ```
 
-Or pick only what you need:
-
-```toml
-[dependencies]
-zenocore  = { git = "https://github.com/nextcore/zeno-rs" }
-zeno-blade = { git = "https://github.com/nextcore/zeno-rs" }
-```
-
-### Execute a Script
-
-```rust
-use zenoengine::{new_engine, parser::parse_string, executor::Context, scope::{Scope, Value}};
-
-let engine = new_engine();
-let mut ctx = Context::new();
-let scope = Scope::new(None);
-
-scope.set("name", Value::String("World".to_string()));
-
-let script = r#"
-    if: $name == 'World' {
-        then: { set: $greeting = "Hello, World! 🌍" }
-        else: { set: $greeting = "Hello, stranger." }
-    }
-"#;
-
-let root = parse_string(script, "main.zl").unwrap();
-engine.execute(&mut ctx, &root, &scope).unwrap();
-
-println!("{}", scope.get("greeting").unwrap().to_string_coerce());
-// Hello, World! 🌍
-```
-
-### Render a Blade Template
+### Step 2 — Point it at your existing views directory
 
 ```rust
 use std::sync::Mutex;
 use zenoengine::{new_engine, executor::Context, scope::{Scope, Value}};
-use zeno_blade::{register_blade_slots, slots::HtmlBuffer, transpiler::parse_string};
+use zeno_blade::{register_blade_slots, slots::HtmlBuffer};
+use zenocore::parser::parse_string;
 
 let mut engine = new_engine();
 register_blade_slots(&mut engine);
@@ -122,21 +169,47 @@ let mut ctx = Context::new();
 ctx.set("httpWriter", HtmlBuffer(Mutex::new(String::new())));
 
 let scope = Scope::new(None);
-scope.set("_view_root", Value::String("resources/views".to_string()));
+scope.set("_view_root", Value::String("resources/views".to_string())); // 👈 same path
+scope.set("user",  Value::String("Andi".to_string()));
 scope.set("title", Value::String("Dashboard".to_string()));
 
 let node = parse_string("view.blade: 'dashboard'", "main.zl").unwrap();
 engine.execute(&mut ctx, &node, &scope).unwrap();
 
 let html = ctx.get::<HtmlBuffer>("httpWriter").unwrap();
-println!("{}", html.0.lock().unwrap());
+println!("{}", html.0.lock().unwrap()); // ← your rendered HTML
 ```
+
+### Step 3 — Your existing Blade templates work unchanged
+
+```html
+{{-- resources/views/dashboard.blade.zl — no changes needed --}}
+@extends('layouts.app')
+
+@section('content')
+  <h1>Welcome, {{ $user }}!</h1>
+
+  @if($role == 'admin')
+    <span class="badge badge-danger">Admin</span>
+  @endif
+
+  @forelse($posts as $post)
+    <article><h2>{{ $post }}</h2></article>
+  @empty
+    <p>No posts yet.</p>
+  @endforelse
+@endsection
+```
+
+That's it. **No rewrite. No new syntax. Just a faster runtime.**
 
 ---
 
 ## 🎨 Blade Directives
 
-Write templates that feel just like Laravel — because they are:
+> **`zeno-blade`** transpiles `.blade.zl` templates to ZenoLang AST nodes, then executes them against the `zenocore` engine. The result is standard HTML — same as what Laravel would produce.
+
+Full directive support, identical to Laravel Blade:
 
 ```html
 @extends('layouts.app')
@@ -145,7 +218,7 @@ Write templates that feel just like Laravel — because they are:
 
 <h1>Welcome, {{ $user }}!</h1>
 
-{{-- Comments are never rendered --}}
+{{-- Comments never appear in output --}}
 
 @if($role == 'admin')
     <span class="badge">Admin</span>
@@ -176,32 +249,32 @@ Write templates that feel just like Laravel — because they are:
 @endpush
 ```
 
-### Full Directive Reference
+### Directive Reference
 
-| Directive | Description |
-|-----------|-------------|
-| `{{ $var }}` | Echo (HTML-escaped) |
-| `{!! $raw !!}` | Echo raw/unescaped |
-| `@if` / `@elseif` / `@else` / `@endif` | Conditional |
-| `@foreach` / `@endforeach` | Standard loop |
-| `@forelse` / `@empty` / `@endforelse` | Loop with empty fallback |
-| `@extends('layout')` | Layout inheritance |
-| `@section('name')` / `@endsection` | Define section |
-| `@yield('name')` | Output section |
-| `@include('partial')` | Include partial view |
-| `@push('stack')` / `@stack('stack')` | Stacked content blocks |
-| `@class(['cls' => $cond])` | Conditional CSS classes |
-| `@method('PUT')` | HTTP method spoofing |
-| `@csrf` | CSRF hidden input |
-| `{{-- comment --}}` | Blade comment |
+| Directive | Laravel Blade | zeno-blade |
+|-----------|:---:|:---:|
+| `{{ $var }}` — escaped echo | ✅ | ✅ |
+| `{!! $raw !!}` — raw echo | ✅ | ✅ |
+| `@if` / `@elseif` / `@else` / `@endif` | ✅ | ✅ |
+| `@foreach` / `@endforeach` | ✅ | ✅ |
+| `@forelse` / `@empty` / `@endforelse` | ✅ | ✅ |
+| `@extends('layout')` | ✅ | ✅ |
+| `@section` / `@endsection` | ✅ | ✅ |
+| `@yield('name')` | ✅ | ✅ |
+| `@include('partial')` | ✅ | ✅ |
+| `@push('stack')` / `@stack('stack')` | ✅ | ✅ |
+| `@class(['cls' => $cond])` | ✅ | ✅ |
+| `@method('PUT')` | ✅ | ✅ |
+| `@csrf` | ✅ | ✅ |
+| `{{-- comment --}}` | ✅ | ✅ |
 
 ---
 
 ## 🧩 HTML Components
 
-Define reusable, scoped components — just like Vue or Laravel Blade components.
+Identical to Laravel Blade components — `<x-component>` with named slots and dynamic props.
 
-**`resources/views/components/alert.blade.zl`:**
+**Define once** — `resources/views/components/alert.blade.zl`:
 ```html
 <div @class(['alert', 'alert-danger' => $is_danger, 'alert-success' => $is_success])>
     <strong>{{ $header }}</strong>
@@ -209,7 +282,7 @@ Define reusable, scoped components — just like Vue or Laravel Blade components
 </div>
 ```
 
-**Use it anywhere:**
+**Use anywhere — same syntax as Laravel:**
 ```html
 <x-alert :is_danger="true">
     <x-slot name="header">Access Denied</x-slot>
@@ -225,19 +298,65 @@ Define reusable, scoped components — just like Vue or Laravel Blade components
 </div>
 ```
 
-Props are **automatically isolated** — the component gets its own scope. No pollution, no surprises.
+Props are **automatically isolated** — each component gets its own scope. No variable pollution.
 
 ---
 
-## 🧰 ZenoLang Script Reference
+## ⚙️ Template Loading & Hot Reload
 
-ZenoLang powers the logic layer — an indented, readable scripting language:
+> [!IMPORTANT]
+> **Hot reload is the #1 reason to choose `zeno-blade` over Tera.**  
+> See the [full comparison](#-zeno-blade-vs-tera--why-blade-wins) for details.
+
+Most Rust template engines force a painful choice: either restart the server, or reload **everything** from scratch. `zeno-blade` does neither.
+
+`zeno-blade` uses a **smart mtime-based per-file cache**:
+
+1. Template loads → parsed to AST, stored in RAM. ⚡
+2. Next request → check file's `modified time` (one lightweight syscall, no file read).
+3. **File unchanged** → serve AST straight from RAM. Zero disk I/O.
+4. **File changed** → re-read, re-parse, update cache automatically.
+
+```
+Edit template → Save → Refresh browser  ✅  (changes visible instantly)
+No edits → Every subsequent request      ✅  (served from RAM, no disk touch)
+```
+
+**No env vars. No restart. No `cargo build`. Works out of the box.**
+
+> [!TIP]
+> Recompiling Rust is only needed when you change **Rust code** (handlers, slots, business logic).  
+> Template changes — layouts, components, partials — are always hot-reloaded automatically.
+
+### Preload mode (strict production)
+
+If you want the server to **fail at startup** rather than at runtime when a template is missing:
+
+```rust
+use zeno_blade::transpiler::transpile_blade_native;
+
+// In main() — warm up the entire cache before accepting requests
+let views = ["dashboard", "layouts/app", "partials/header"];
+for view in &views {
+    let path = format!("resources/views/{}.blade.zl", view);
+    let content = std::fs::read_to_string(&path)
+        .unwrap_or_else(|_| panic!("Missing template at startup: {}", path));
+    transpile_blade_native(&content, &path)
+        .unwrap_or_else(|e| panic!("Template parse error at startup: {}", e));
+}
+// All templates pre-loaded. Server ready.
+```
+
+---
+
+## 🧰 ZenoLang — The Logic Layer
+
+Beyond Blade, `zeno-rs` includes **ZenoLang** — a readable, indented scripting language that powers the execution layer. You won't write it in templates directly (Blade directives handle that), but it's available for server-side scripts and custom logic:
 
 ```yaml
 # Variables & types
 set: $name = "Andi"
 set: $score = 95
-set: $active = true
 set: $tags = ['rust', 'fast', 'safe']
 
 # Conditionals
@@ -247,19 +366,10 @@ if: $score >= 90 {
   else: { set: $grade = "C" }
 }
 
-# Loops with metadata
+# Loops
 for: $tags {
   as: $tag
-  do: {
-    log: "$loop.iteration. $tag"
-  }
-}
-
-# Forelse
-forelse: $users {
-  as: $user
-  do: { log: $user }
-  forelse_empty: { log: "No users found." }
+  do: { log: "$loop.iteration. $tag" }
 }
 
 # Functions
@@ -267,38 +377,30 @@ fn: add {
   params: [$a, $b]
   do: { return: $a + $b }
 }
-set: $result = add(10, 32)   # 42
 
 # Error handling
 try {
   do: { http.get: 'https://api.example.com/data' }
   catch: { log: "Failed: $error" }
 }
-
-# Switch
-switch: $role {
-  case 'admin': { log: "Full access" }
-  case 'editor': { log: "Edit access" }
-  default: { log: "Read only" }
-}
 ```
 
 ---
 
-## 🔌 Custom Slots
+## 🔌 Custom Slots (Extend the Engine)
 
-Extend the engine with your own handlers — call them from any template or script:
+Register your own handlers in Rust and call them from any template or script — like Laravel's custom Blade directives, but with the full power of Rust:
 
 ```rust
 use std::sync::Arc;
-use zenocore::{executor::Engine, slots::SlotMeta};
+use zenocore::{Engine, SlotMeta, Value};
 
 fn register_my_slots(engine: &mut Engine) {
     engine.register(
         "db.find",
         Arc::new(|engine, _ctx, node, scope| {
             let table = engine.resolve_shorthand_value(node, scope).to_string_coerce();
-            // ... query your database
+            // ... query your database (sqlx, diesel, etc.)
             scope.set("result", Value::String(format!("Queried {}", table)));
             Ok(())
         }),
@@ -310,17 +412,17 @@ fn register_my_slots(engine: &mut Engine) {
 }
 ```
 
+Then call it from a template or script:
 ```yaml
-# In any template or script:
 db.find: 'users'
-log: $result   # Queried users
+log: $result   # → Queried users
 ```
 
 ---
 
 ## 🚀 Axum Example
 
-A full Axum web server with ZenoLang execution endpoint and Swagger UI — ready to run:
+A full Axum web server with Blade rendering, ZenoLang execution, and Swagger UI — clone and run:
 
 ```bash
 git clone https://github.com/nextcore/zeno-rs
@@ -329,11 +431,9 @@ cargo run -p web_server_example
 ```
 
 ```
-🚀 ZenoEngine Axum web server running at http://127.0.0.1:3000
-📖 Swagger UI available at http://127.0.0.1:3000/docs
+🚀 ZenoEngine Axum server running at http://127.0.0.1:3000
+📖 Swagger UI at http://127.0.0.1:3000/docs
 ```
-
-**Endpoints:**
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -343,9 +443,9 @@ cargo run -p web_server_example
 
 ---
 
-## 📄 OpenAPI / Swagger
+## 📄 OpenAPI / Swagger (Bonus)
 
-Auto-generate API documentation from your routes with zero config:
+Auto-generate API docs from your routes with zero config — something you'd need a separate package for in Laravel:
 
 ```rust
 use zenoengine::apidoc::{APIRegistry, RouteDoc};
@@ -363,20 +463,19 @@ registry.register("POST", "/users", RouteDoc {
 
 ---
 
-## 🏗️ Building & Testing
+## 🏗️ Build & Test
 
 ```bash
-# Clone
 git clone https://github.com/nextcore/zeno-rs
 cd zeno-rs
 
-# Build entire workspace
+# Build all crates
 cargo build
 
 # Run all tests
 cargo test --all
 
-# Run specific crate tests
+# Run only Blade engine tests
 cargo test -p zeno-blade
 ```
 
@@ -388,10 +487,11 @@ cargo test -p zeno-blade
 
 | Repository | Language | Description |
 |-----------|----------|-------------|
-| [nextcore/zeno-go](https://github.com/nextcore/zeno-go) | Go | The original ZenoEngine implementation |
+| [nextcore/zeno-go](https://github.com/nextcore/zeno-go) | Go | Original ZenoEngine — Go implementation |
 | [nextcore/zeno-rs](https://github.com/nextcore/zeno-rs) | Rust | This repository — Rust port |
 
-Templates written for `zeno-go` are **100% compatible** with `zeno-rs`. Switch backends, keep your views.
+Templates written for `zeno-go` are **100% compatible** with `zeno-rs`.  
+Same `.blade.zl` files. Same directives. Same component syntax. Different runtime.
 
 ---
 
@@ -403,8 +503,10 @@ MIT © [NextCore](https://github.com/nextcore)
 
 <div align="center">
 
-**Built with ❤️ in Rust · Zero Unsafe · Zero Bloat · Full Power**
+**Keep your Blade templates. Ditch the PHP overhead. Ship in Rust.**
 
-⭐ If zeno-rs saves you time, consider giving it a star!
+> `zeno-rs` is the workspace — [`zeno-blade`](crates/zeno-blade) is the Blade engine inside it.
+
+⭐ If this saves you a rewrite, give it a star!
 
 </div>
