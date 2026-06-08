@@ -497,7 +497,7 @@ Same `.blade.zl` files. Same directives. Same component syntax. Different runtim
 
 ## 📝 License
 
-MIT © [NextCore](https://github.com/nextcore)
+Apache 2.0 © [NextCore](https://github.com/nextcore)
 
 ---
 
