@@ -47,21 +47,54 @@ pub struct SlotMeta {
 pub type HandlerFn = Arc<dyn Fn(&Engine, &mut Context, &Node, &Arc<Scope>) -> Result<(), Diagnostic> + Send + Sync>;
 
 pub struct Engine {
-    pub registry: HashMap<String, HandlerFn>,
-    pub docs: HashMap<String, SlotMeta>,
+    pub registry: std::sync::Mutex<HashMap<String, HandlerFn>>,
+    pub docs: std::sync::Mutex<HashMap<String, SlotMeta>>,
+    #[cfg(feature = "plugins")]
+    pub plugins: std::sync::Mutex<Vec<Arc<libloading::Library>>>,
 }
 
 impl Engine {
     pub fn new() -> Self {
         Self {
-            registry: HashMap::new(),
-            docs: HashMap::new(),
+            registry: std::sync::Mutex::new(HashMap::new()),
+            docs: std::sync::Mutex::new(HashMap::new()),
+            #[cfg(feature = "plugins")]
+            plugins: std::sync::Mutex::new(Vec::new()),
         }
     }
 
-    pub fn register(&mut self, name: &str, handler: HandlerFn, meta: SlotMeta) {
-        self.registry.insert(name.to_string(), handler);
-        self.docs.insert(name.to_string(), meta);
+    pub fn register(&self, name: &str, handler: HandlerFn, meta: SlotMeta) {
+        self.registry.lock().unwrap().insert(name.to_string(), handler);
+        self.docs.lock().unwrap().insert(name.to_string(), meta);
+    }
+
+    #[cfg(feature = "plugins")]
+    pub unsafe fn load_plugin<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), Diagnostic> {
+        let path_ref = path.as_ref();
+        let lib = unsafe { libloading::Library::new(path_ref) }.map_err(|e| Diagnostic {
+            r#type: "error".to_string(),
+            message: format!("plugin.load: failed to load library '{:?}': {}", path_ref, e),
+            filename: String::new(),
+            line: 0,
+            col: 0,
+            slot: Some("plugin.load".to_string()),
+        })?;
+
+        let lib_arc = Arc::new(lib);
+
+        type PluginInitFn = unsafe extern "C" fn(&Engine);
+        let symbol: libloading::Symbol<PluginInitFn> = unsafe { lib_arc.get(b"zeno_plugin_init\0") }.map_err(|e| Diagnostic {
+            r#type: "error".to_string(),
+            message: format!("plugin.load: symbol 'zeno_plugin_init' not found in '{:?}': {}", path_ref, e),
+            filename: String::new(),
+            line: 0,
+            col: 0,
+            slot: Some("plugin.load".to_string()),
+        })?;
+
+        unsafe { symbol(self) };
+        self.plugins.lock().unwrap().push(lib_arc);
+        Ok(())
     }
 
     pub fn resolve_shorthand_value(&self, node: &Node, scope: &Arc<Scope>) -> Value {
@@ -93,7 +126,11 @@ impl Engine {
             (val_str.starts_with('"') && val_str.ends_with('"')) ||
             (val_str.starts_with('\'') && val_str.ends_with('\''))
         ) {
-            return Value::String(val_str[1..val_str.len()-1].to_string());
+            let inner = &val_str[1..val_str.len() - 1];
+            if inner.contains("${") {
+                return Value::String(interpolate_str(inner, scope));
+            }
+            return Value::String(inner.to_string());
         }
 
         // D. Check bracket notation index normalization (e.g. $list[0] -> $list.0)
@@ -297,9 +334,11 @@ impl Engine {
         }
 
         // B. Check registered slot handler
-        if let Some(handler) = self.registry.get(&node.name) {
+        let handler_opt = self.registry.lock().unwrap().get(&node.name).cloned();
+        if let Some(handler) = handler_opt {
             // 1. Perform Validation if metadata exists
-            if let Some(meta) = self.docs.get(&node.name) {
+            let meta_opt = self.docs.lock().unwrap().get(&node.name).cloned();
+            if let Some(meta) = meta_opt {
                 // a. Check Unknown Attributes
                 if !meta.inputs.is_empty() {
                     let allow_any = meta.inputs.contains_key("*") || meta.inputs.contains_key("*(any)");
@@ -408,6 +447,35 @@ impl Engine {
     }
 }
 
+/// Expand `${var}` and `${$var}` interpolation patterns inside a string using scope values.
+/// Supports dot-notation references (e.g. `${user.name}`).
+pub fn interpolate_str(s: &str, scope: &Arc<Scope>) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut last_idx = 0;
+
+    while let Some(start_offset) = s[last_idx..].find("${") {
+        let abs_start = last_idx + start_offset;
+        result.push_str(&s[last_idx..abs_start]);
+
+        if let Some(end_offset) = s[abs_start..].find('}') {
+            let abs_end = abs_start + end_offset;
+            let key_raw = s[abs_start + 2..abs_end].trim();
+            // Support both ${name} and ${$name}
+            let key = key_raw.trim_start_matches('$');
+            if let Some(val) = scope.get(key) {
+                result.push_str(&val.to_string_coerce());
+            }
+            last_idx = abs_end + 1;
+        } else {
+            // Unclosed brace — emit as-is and stop
+            result.push_str(&s[abs_start..]);
+            return result;
+        }
+    }
+    result.push_str(&s[last_idx..]);
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -415,7 +483,7 @@ mod tests {
 
     #[test]
     fn test_executor_shorthand_and_flow() {
-        let mut engine = Engine::new();
+        let engine = Engine::new();
         let log_called = Arc::new(std::sync::Mutex::new(Vec::new()));
         let log_clone = log_called.clone();
 
@@ -461,7 +529,7 @@ mod tests {
 
     #[test]
     fn test_executor_panic_recovery() {
-        let mut engine = Engine::new();
+        let engine = Engine::new();
         engine.register(
             "panic_slot",
             Arc::new(|_engine, _ctx, _node, _scope| {

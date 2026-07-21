@@ -1,6 +1,8 @@
 pub mod logic;
 pub mod collection;
 pub mod utility;
+pub mod string;
+pub mod math;
 
 use crate::executor::Engine;
 use crate::parser::Node;
@@ -16,6 +18,8 @@ pub fn register_logic_slots(engine: &mut Engine) {
 pub fn register_collection_slots(engine: &mut Engine) {
     collection::register(engine);
     utility::register(engine);
+    string::register(engine);
+    math::register(engine);
 }
 
 // ==========================================
@@ -35,40 +39,52 @@ pub fn resolve_node_value(engine: &Engine, node: &Node, scope: &Arc<Scope>) -> V
 }
 
 pub(crate) fn eval_simple_condition(expr: &str, scope: &Arc<Scope>) -> bool {
-    let ops = ["<=", ">=", "==", "!=", "<", ">"];
-    let mut found_op = None;
-    for op in &ops {
-        if expr.contains(op) {
-            found_op = Some(*op);
-            break;
+    let expr = expr.trim();
+
+    // OR operator (lower precedence)
+    if expr.contains("||") {
+        for part in expr.split("||") {
+            if eval_simple_condition(part.trim(), scope) {
+                return true;
+            }
         }
-    }
-
-    let op = match found_op {
-        Some(o) => o,
-        None => return false,
-    };
-
-    let parts: Vec<&str> = expr.splitn(2, op).collect();
-    if parts.len() != 2 {
         return false;
     }
 
-    let left = parts[0].trim();
-    let right = parts[1].trim();
-
-    let left_val = resolve_expression_value(left, scope);
-    let right_val = resolve_expression_value(right, scope);
-
-    match op {
-        "<" => left_val.to_float() < right_val.to_float(),
-        ">" => left_val.to_float() > right_val.to_float(),
-        "<=" => left_val.to_float() <= right_val.to_float(),
-        ">=" => left_val.to_float() >= right_val.to_float(),
-        "==" => left_val.to_string_coerce() == right_val.to_string_coerce(),
-        "!=" => left_val.to_string_coerce() != right_val.to_string_coerce(),
-        _ => false,
+    // AND operator
+    if expr.contains("&&") {
+        for part in expr.split("&&") {
+            if !eval_simple_condition(part.trim(), scope) {
+                return false;
+            }
+        }
+        return true;
     }
+
+    // Comparison operators (order matters: check 2-char ops first)
+    let ops = ["==", "!=", ">=", "<=", ">", "<"];
+    for op in &ops {
+        if let Some(pos) = expr.find(op) {
+            let left = expr[..pos].trim();
+            let right = expr[pos + op.len()..].trim();
+
+            let left_val = resolve_expression_value(left, scope);
+            let right_val = resolve_expression_value(right, scope);
+
+            return match *op {
+                "<" => left_val.to_float() < right_val.to_float(),
+                ">" => left_val.to_float() > right_val.to_float(),
+                "<=" => left_val.to_float() <= right_val.to_float(),
+                ">=" => left_val.to_float() >= right_val.to_float(),
+                "==" => left_val.to_string_coerce() == right_val.to_string_coerce(),
+                "!=" => left_val.to_string_coerce() != right_val.to_string_coerce(),
+                _ => false,
+            };
+        }
+    }
+
+    // Bare value — resolve and coerce to bool
+    resolve_expression_value(expr, scope).to_bool()
 }
 
 pub(crate) fn resolve_expression_value(s: &str, scope: &Arc<Scope>) -> Value {
@@ -538,5 +554,48 @@ mod tests {
         assert!(duration >= std::time::Duration::from_millis(10));
     }
 
+    #[test]
+    #[cfg(feature = "plugins")]
+    fn test_plugin_loading_and_execution() {
+        let mut engine = Engine::new();
+        register_logic_slots(&mut engine);
 
+        let lib_filename = if cfg!(target_os = "macos") {
+            "libzeno_plugin_example.dylib"
+        } else if cfg!(target_os = "windows") {
+            "zeno_plugin_example.dll"
+        } else {
+            "libzeno_plugin_example.so"
+        };
+
+        let plugin_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent().unwrap()
+            .parent().unwrap()
+            .join("target/debug")
+            .join(lib_filename);
+
+        if plugin_path.exists() {
+            let code = format!(r#"
+                plugin.load: "{}"
+                example.hello: "ZenoLang User" {{
+                    as: $greeting
+                }}
+                example.add_tax: 200.0 {{
+                    rate: 0.10
+                    as: $taxed
+                }}
+            "#, plugin_path.to_string_lossy().replace('\\', "/"));
+
+            let root = parse_string(&code, "test_plugin.zl").unwrap();
+            let mut ctx = Context::new();
+            let scope = Scope::new(None);
+            engine.execute(&mut ctx, &root, &scope).unwrap();
+
+            let greeting = scope.get("greeting").unwrap().to_string_coerce();
+            assert!(greeting.contains("Hello, ZenoLang User!"));
+
+            let taxed = scope.get("taxed").unwrap().to_float();
+            assert!((taxed - 220.0).abs() < 1e-6);
+        }
+    }
 }

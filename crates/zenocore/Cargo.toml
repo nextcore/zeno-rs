@@ -1,6 +1,6 @@
 [package]
 name = "zenocore"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Zero-dependency core engine for ZenoLang — lexer, parser, executor, and scope for the zeno-rs ecosystem"
 license = "Apache-2.0"
@@ -13,4 +13,9 @@ keywords = ["template", "scripting", "engine", "blade", "zeno"]
 categories = ["template-engine", "parser-implementations", "web-programming"]
 
 [dependencies]
-# Zero dependencies — intentional
+libloading = { version = "0.8", optional = true }
+
+[features]
+default = ["plugins"]
+plugins = ["dep:libloading"]
+

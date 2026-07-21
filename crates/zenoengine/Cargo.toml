@@ -1,6 +1,6 @@
 [package]
 name = "zenoengine"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Batteries-included Rust web engine — Blade templating, ZenoLang scripting, OpenAPI docs, and standard library in one facade"
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ keywords = ["blade", "template", "scripting", "web", "axum"]
 categories = ["template-engine", "web-programming", "rendering"]
 
 [dependencies]
-zenocore    = { path = "../zenocore",   version = "0.1.0" }
-zeno-std    = { path = "../zeno-std",   version = "0.1.0" }
-zeno-apidoc = { path = "../zeno-apidoc", version = "0.1.0" }
-zeno-blade  = { path = "../zeno-blade", version = "0.1.0" }
+zenocore    = { path = "../zenocore",   version = "0.2.0" }
+zeno-std    = { path = "../zeno-std",   version = "0.2.0" }
+zeno-apidoc = { path = "../zeno-apidoc", version = "0.2.0" }
+zeno-blade  = { path = "../zeno-blade", version = "0.2.0" }

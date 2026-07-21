@@ -76,7 +76,8 @@ impl<'a> Analyzer<'a> {
 
         // B. Slot Validation
         if !node.name.is_empty() && !node.name.starts_with('$') {
-            if let Some(meta) = self.engine.docs.get(&node.name) {
+            let docs_lock = self.engine.docs.lock().unwrap();
+            if let Some(meta) = docs_lock.get(&node.name) {
                 // 1. Check Main Value Type
                 if !meta.value_type.is_empty() && meta.value_type != "any" {
                     if let Some(ref val_str) = node.value {
@@ -189,7 +190,7 @@ impl<'a> Analyzer<'a> {
                 if !keywords.contains(&node.name.as_str()) {
                     let mut is_call_arg = false;
                     if let Some(ref p_name) = parent_name {
-                        if let Some(p_meta) = self.engine.docs.get(*p_name) {
+                        if let Some(p_meta) = docs_lock.get(*p_name) {
                             if p_meta.inputs.is_empty() {
                                 is_call_arg = true;
                             }

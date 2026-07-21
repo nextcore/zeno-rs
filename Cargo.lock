@@ -464,6 +464,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
+name = "libloading"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1084,7 +1094,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "zenoengine 0.1.0 (git+https://github.com/nextcore/zenoengine.git)",
+ "zenoengine 0.1.0",
 ]
 
 [[package]]
@@ -1176,6 +1186,7 @@ dependencies = [
 [[package]]
 name = "zeno-apidoc"
 version = "0.1.0"
+source = "git+https://github.com/nextcore/zenoengine.git#197bcf565da779c9c55f52949e08920512e47db5"
 dependencies = [
  "serde",
  "serde_json",
@@ -1183,8 +1194,7 @@ dependencies = [
 
 [[package]]
 name = "zeno-apidoc"
-version = "0.1.0"
-source = "git+https://github.com/nextcore/zenoengine.git#197bcf565da779c9c55f52949e08920512e47db5"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1192,19 +1202,16 @@ dependencies = [
 
 [[package]]
 name = "zeno-blade"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
- "zenocore 0.1.0",
+ "zenocore 0.2.0",
 ]
 
 [[package]]
-name = "zeno-std"
+name = "zeno-plugin-example"
 version = "0.1.0"
 dependencies = [
- "chrono",
- "evalexpr",
- "rust_decimal",
- "zenocore 0.1.0",
+ "zenocore 0.2.0",
 ]
 
 [[package]]
@@ -1215,36 +1222,49 @@ dependencies = [
  "chrono",
  "evalexpr",
  "rust_decimal",
- "zenocore 0.1.0 (git+https://github.com/nextcore/zenoengine.git)",
+ "zenocore 0.1.0",
+]
+
+[[package]]
+name = "zeno-std"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "evalexpr",
+ "rust_decimal",
+ "zenocore 0.2.0",
 ]
 
 [[package]]
 name = "zenocore"
 version = "0.1.0"
+source = "git+https://github.com/nextcore/zenoengine.git#197bcf565da779c9c55f52949e08920512e47db5"
 
 [[package]]
 name = "zenocore"
-version = "0.1.0"
-source = "git+https://github.com/nextcore/zenoengine.git#197bcf565da779c9c55f52949e08920512e47db5"
+version = "0.2.0"
+dependencies = [
+ "libloading",
+]
 
 [[package]]
 name = "zenoengine"
 version = "0.1.0"
+source = "git+https://github.com/nextcore/zenoengine.git#197bcf565da779c9c55f52949e08920512e47db5"
 dependencies = [
  "zeno-apidoc 0.1.0",
- "zeno-blade",
  "zeno-std 0.1.0",
  "zenocore 0.1.0",
 ]
 
 [[package]]
 name = "zenoengine"
-version = "0.1.0"
-source = "git+https://github.com/nextcore/zenoengine.git#197bcf565da779c9c55f52949e08920512e47db5"
+version = "0.2.0"
 dependencies = [
- "zeno-apidoc 0.1.0 (git+https://github.com/nextcore/zenoengine.git)",
- "zeno-std 0.1.0 (git+https://github.com/nextcore/zenoengine.git)",
- "zenocore 0.1.0 (git+https://github.com/nextcore/zenoengine.git)",
+ "zeno-apidoc 0.2.0",
+ "zeno-blade",
+ "zeno-std 0.2.0",
+ "zenocore 0.2.0",
 ]
 
 [[package]]

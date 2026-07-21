@@ -1,0 +1,11 @@
+[package]
+name = "zeno-plugin-example"
+version = "0.1.0"
+edition = "2024"
+description = "Example dynamic C-ABI Rust plugin for ZenoCore"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+zenocore = { path = "../zenocore" }

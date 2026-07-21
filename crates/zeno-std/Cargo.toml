@@ -1,6 +1,6 @@
 [package]
 name = "zeno-std"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Standard library for zeno-rs — math, date, string, and money utilities for ZenoLang templates"
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ keywords = ["zeno", "template", "stdlib", "date", "math"]
 categories = ["template-engine", "web-programming"]
 
 [dependencies]
-zenocore = { path = "../zenocore", version = "0.1.0" }
+zenocore = { path = "../zenocore", version = "0.2.0" }
 chrono = { version = "0.4", features = ["alloc"] }
 rust_decimal = "1.34"
 evalexpr = "8.1"
