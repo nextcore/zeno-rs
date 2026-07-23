@@ -1204,14 +1204,14 @@ dependencies = [
 name = "zeno-blade"
 version = "0.2.0"
 dependencies = [
- "zenocore 0.2.0",
+ "zenocore 0.2.1",
 ]
 
 [[package]]
 name = "zeno-plugin-example"
 version = "0.1.0"
 dependencies = [
- "zenocore 0.2.0",
+ "zenocore 0.2.1",
 ]
 
 [[package]]
@@ -1232,7 +1232,7 @@ dependencies = [
  "chrono",
  "evalexpr",
  "rust_decimal",
- "zenocore 0.2.0",
+ "zenocore 0.2.1",
 ]
 
 [[package]]
@@ -1242,7 +1242,7 @@ source = "git+https://github.com/nextcore/zenoengine.git#197bcf565da779c9c55f529
 
 [[package]]
 name = "zenocore"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "libloading",
 ]
@@ -1264,7 +1264,7 @@ dependencies = [
  "zeno-apidoc 0.2.0",
  "zeno-blade",
  "zeno-std 0.2.0",
- "zenocore 0.2.0",
+ "zenocore 0.2.1",
 ]
 
 [[package]]
