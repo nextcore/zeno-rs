@@ -117,7 +117,13 @@ impl Engine {
 
         // B. Get raw string value
         let mut val_str = match &node.value {
-            Some(v) => v.trim().to_string(),
+            Some(v) => {
+                let mut s = v.trim().to_string();
+                if s.ends_with(',') {
+                    s = s[..s.len() - 1].trim().to_string();
+                }
+                s
+            }
             None => return Value::Nil,
         };
 
@@ -553,5 +559,17 @@ mod tests {
         let err = res.unwrap_err();
         assert_eq!(err.r#type, "panic");
         assert!(err.message.contains("intentional panic"));
+    }
+
+    #[test]
+    fn test_executor_trailing_comma() {
+        let engine = Engine::new();
+        let root = parse_string("$connections: $connections_str ,", "test.zl").unwrap();
+        let mut ctx = Context::new();
+        let scope = Scope::new(None);
+        scope.set("connections_str", Value::String("5".to_string()));
+
+        engine.execute(&mut ctx, &root, &scope).unwrap();
+        assert_eq!(scope.get("connections").unwrap().to_string_coerce(), "5");
     }
 }
