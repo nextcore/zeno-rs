@@ -1,6 +1,6 @@
 [package]
 name = "zenocore"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Zero-dependency core engine for ZenoLang — lexer, parser, executor, and scope for the zeno-rs ecosystem"
 license = "Apache-2.0"
