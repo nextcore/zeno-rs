@@ -1,9 +1,9 @@
 <div align="center">
 
 <img src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white" />
-<img src="https://img.shields.io/badge/version-0.2.0-orange?style=for-the-badge" />
+<img src="https://img.shields.io/badge/version-0.2.2-orange?style=for-the-badge" />
 <img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=for-the-badge" />
-<img src="https://img.shields.io/badge/crates.io-v0.2.0-fc8d62?style=for-the-badge&logo=rust" />
+<img src="https://img.shields.io/badge/crates.io-v0.2.2-fc8d62?style=for-the-badge&logo=rust" />
 <img src="https://img.shields.io/badge/tests-27%2F27%20passing-brightgreen?style=for-the-badge" />
 <img src="https://img.shields.io/badge/Blade-compatible-blueviolet?style=for-the-badge" />
 <img src="https://img.shields.io/badge/plugins-native%20C--ABI-ff6b35?style=for-the-badge" />
@@ -84,9 +84,9 @@ Add `zenoengine` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-zenoengine = "0.2"   # batteries-included facade
-zenocore   = "0.2"   # core engine + plugin system
-zeno-blade  = "0.2"  # or just the Blade engine
+zenoengine = "0.2.2"   # batteries-included facade
+zenocore   = "0.2.2"   # core engine + plugin system
+zeno-blade  = "0.2.2"  # or just the Blade engine
 ```
 
 ### 2. Render Blade Templates in Rust
@@ -138,7 +138,19 @@ println!("{}", html.0.lock().unwrap()); // Rendered HTML output
 
 ## 🔌 Native Rust Dynamic Plugins (`.so` / `.dylib` / `.dll`)
 
-`zeno-rs` includes a **Native Dynamic Plugin System**. You can compile custom Rust code into a shared library (`.so`, `.dylib`, `.dll`) and load it dynamically into ZenoCore at runtime.
+`zeno-rs` includes a **Native Dynamic Plugin System** — one of ZenoLang's most powerful features. You can compile custom Rust code into a shared library (`.so`, `.dylib`, `.dll`) and load it dynamically into ZenoCore **at runtime**, without recompiling the core engine.
+
+### Plugin Support in ZenoLang
+
+As of `v0.2.2`, ZenoLang fully supports native plugins with:
+
+| Capability | Description |
+|---|---|
+| 🔄 **Runtime Loading** | Load `.so`/`.dylib`/`.dll` at runtime via `plugin.load:` |
+| 🧩 **Custom Slots** | Register new slots callable from any `.zl` script |
+| 📦 **Scope Access** | Read & write the ZenoLang `Scope` from plugin code |
+| 🔗 **C-ABI Stable Interface** | Safe FFI boundary via `extern "C"` entry point |
+| ♻️ **Hot-pluggable** | Multiple plugins can be loaded in one script session |
 
 ### 1. Write Plugin Crate (`cdylib`)
 
@@ -175,6 +187,30 @@ custom.sha256: 'secret data' {
 
 log: $hash
 ```
+
+### 3. Multiple Plugins in One Script
+
+```yaml
+# You can load multiple plugins in the same session
+plugin.load: './plugins/libimage_processor.so'
+plugin.load: './plugins/libpayment_gateway.so'
+
+# Each plugin registers its own named slots
+image.resize: $original_path {
+    width: 800
+    height: 600
+    as: $resized
+}
+
+payment.charge: $amount {
+    currency: 'USD'
+    as: $result
+}
+
+log: $result
+```
+
+> 💡 See [`crates/zeno-plugin-example`](crates/zeno-plugin-example) for a full working plugin implementation.
 
 ---
 
