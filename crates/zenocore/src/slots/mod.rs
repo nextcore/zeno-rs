@@ -555,6 +555,85 @@ mod tests {
     }
 
     #[test]
+    fn test_try_catch_no_error() {
+        let mut engine = Engine::new();
+        register_logic_slots(&mut engine);
+
+        let code = r#"
+            var: $result { val: "initial" }
+            try: {
+                run: {
+                    var: $result { val: "success" }
+                }
+                catch: {
+                    var: $result { val: "caught" }
+                }
+            }
+        "#;
+        let root = parse_string(code, "test.zl").unwrap();
+        let mut ctx = Context::new();
+        let scope = Scope::new(None);
+        engine.execute(&mut ctx, &root, &scope).unwrap();
+
+        assert_eq!(scope.get("result").unwrap(), Value::String("success".to_string()));
+    }
+
+    #[test]
+    fn test_try_catch_with_error() {
+        let mut engine = Engine::new();
+        register_logic_slots(&mut engine);
+
+        // json.parse dengan input invalid akan menghasilkan error
+        let code = r#"
+            var: $result { val: "initial" }
+            try: {
+                run: {
+                    json.parse: "BUKAN_JSON_VALID" { as: $data }
+                    var: $result { val: "success" }
+                }
+                catch: {
+                    var: $result { val: "caught" }
+                }
+            }
+        "#;
+        let root = parse_string(code, "test.zl").unwrap();
+        let mut ctx = Context::new();
+        let scope = Scope::new(None);
+        engine.execute(&mut ctx, &root, &scope).unwrap();
+
+        // Harus masuk ke catch karena json.parse gagal
+        assert_eq!(scope.get("result").unwrap(), Value::String("caught".to_string()));
+        // Variabel $error harus terisi pesan error
+        let error_val = scope.get("error").unwrap();
+        assert!(matches!(error_val, Value::String(_)));
+    }
+
+    #[test]
+    fn test_try_catch_error_variable() {
+        let mut engine = Engine::new();
+        register_logic_slots(&mut engine);
+
+        let code = r#"
+            var: $caught_error { val: "" }
+            try: {
+                run: {
+                    json.parse: "INVALID" { as: $data }
+                }
+                catch: {
+                    var: $caught_error { val: $error }
+                }
+            }
+        "#;
+        let root = parse_string(code, "test.zl").unwrap();
+        let mut ctx = Context::new();
+        let scope = Scope::new(None);
+        engine.execute(&mut ctx, &root, &scope).unwrap();
+
+        let caught = scope.get("caught_error").unwrap().to_string_coerce();
+        assert!(!caught.is_empty(), "Error message should be captured in $error");
+    }
+
+    #[test]
     #[cfg(feature = "plugins")]
     fn test_plugin_loading_and_execution() {
         let mut engine = Engine::new();

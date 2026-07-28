@@ -862,6 +862,63 @@ pub fn register(engine: &mut Engine) {
             value_type: String::new(),
         },
     );
+
+    // ==========================================
+    // TRY / CATCH (Error handling block)
+    // ==========================================
+    // Syntax:
+    //   try: {
+    //     run: { <statements> }
+    //     catch: { <error handler using $error> }
+    //   }
+    engine.register(
+        "try",
+        Arc::new(|engine, ctx, node, scope| {
+            let mut run_node: Option<&Node> = None;
+            let mut catch_node: Option<&Node> = None;
+
+            for child in &node.children {
+                match child.name.as_str() {
+                    "run" => run_node = Some(child),
+                    "catch" => catch_node = Some(child),
+                    _ => {}
+                }
+            }
+
+            // Execute the `run` block — capture any Diagnostic error
+            let result = if let Some(run) = run_node {
+                let mut exec_result = Ok(());
+                for child in &run.children {
+                    exec_result = engine.execute(ctx, child, scope);
+                    if exec_result.is_err() {
+                        break;
+                    }
+                }
+                exec_result
+            } else {
+                Ok(())
+            };
+
+            // On error, run the `catch` block with `$error` set in scope
+            if let Err(diagnostic) = result {
+                scope.set("error", Value::String(diagnostic.message.clone()));
+                if let Some(catch) = catch_node {
+                    for child in &catch.children {
+                        engine.execute(ctx, child, scope)?;
+                    }
+                }
+            }
+
+            Ok(())
+        }),
+        SlotMeta {
+            description: "Execute a block of code safely. On error, run the catch block with $error set.".to_string(),
+            example: "try: {\n  run: {\n    io.file.read: '/etc/hosts' { as: $content }\n  }\n  catch: {\n    log: \"Error: ${error}\"\n  }\n}".to_string(),
+            inputs: HashMap::new(),
+            required_blocks: Vec::new(),
+            value_type: String::new(),
+        },
+    );
 }
 
 /// Evaluate a condition expression string against the current scope.
