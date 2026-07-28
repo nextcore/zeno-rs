@@ -1,10 +1,10 @@
 <div align="center">
 
 <img src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white" />
-<img src="https://img.shields.io/badge/version-0.2.2-orange?style=for-the-badge" />
+<img src="https://img.shields.io/badge/version-0.2.3-orange?style=for-the-badge" />
 <img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=for-the-badge" />
-<img src="https://img.shields.io/badge/crates.io-v0.2.2-fc8d62?style=for-the-badge&logo=rust" />
-<img src="https://img.shields.io/badge/tests-27%2F27%20passing-brightgreen?style=for-the-badge" />
+<img src="https://img.shields.io/badge/crates.io-v0.2.3-fc8d62?style=for-the-badge&logo=rust" />
+<img src="https://img.shields.io/badge/tests-30%2F30%20passing-brightgreen?style=for-the-badge" />
 <img src="https://img.shields.io/badge/Blade-compatible-blueviolet?style=for-the-badge" />
 <img src="https://img.shields.io/badge/plugins-native%20C--ABI-ff6b35?style=for-the-badge" />
 
@@ -14,7 +14,7 @@
 
 > Write familiar `@if`, `@foreach`, `@extends`, `{{ $var }}`, and `<x-component>` Blade templates — executed directly at native Rust speed.
 
-[Overview](#-overview) · [vs Tera](#-zeno-blade-vs-tera) · [Quickstart](#-quickstart) · [Native Plugins](#-native-rust-dynamic-plugins-so--dylib--dll) · [Blade Reference](#-blade-directives) · [Components](#-html-components) · [Hot Reload](#%EF%B8%8F-template-loading--hot-reload)
+[Overview](#-overview) · [vs Tera](#-zeno-blade-vs-tera) · [Quickstart](#-quickstart) · [Try/Catch](#-trycatch-error-handling) · [Native Plugins](#-native-rust-dynamic-plugins-so--dylib--dll) · [Blade Reference](#-blade-directives) · [Components](#-html-components) · [Hot Reload](#%EF%B8%8F-template-loading--hot-reload)
 
 </div>
 
@@ -29,6 +29,7 @@
 - **100% Blade Compatible**: Supports `@extends`, `@section`, `@yield`, `@include`, `@forelse`, `@csrf`, `@method`, and `<x-component>` tags.
 - **Smart Hot Reload**: Per-file `mtime` cache invalidation so template edits take effect instantly in development without restarting the server.
 - **Embedded ZenoLang Execution**: Full scripting engine with 50+ built-in slots for string manipulation, math calculations, arrays, and maps.
+- **Native Try/Catch Error Handling**: First-class `try/catch` slot for safe execution with `$error` variable injection (new in `v0.2.3`).
 - **Native Dynamic Plugin System**: Load compiled Rust shared libraries (`.so`, `.dylib`, `.dll`) at runtime via FFI without recompiling the core engine.
 - **Lightweight Footprint**: Single binary deployment with minimal memory consumption (~2-5 MB under load).
 
@@ -44,11 +45,12 @@ Tera is a popular template engine in the Rust ecosystem inspired by Jinja2/Djang
 |---|:---:|:---:|---|
 | 🔥 **Per-file Hot Reload** | ✅ | ❌ | zeno-blade re-parses only modified files on save |
 | 🎨 **Laravel Blade Syntax** | ✅ | ❌ | Direct support for `@extends`, `@section`, `{{ $var }}` |
-| 🧩 **HTML Components (<x-component>)** | ✅ | ❌ | Native component encapsulation with slots |
+| 🧩 **HTML Components (`<x-component>`)** | ✅ | ❌ | Native component encapsulation with slots |
 | 📐 **Layout Inheritance** | ✅ | ✅ | Both support layout inheritance & block yields |
 | 🔁 **Empty Loop Fallback (`@forelse`)** | ✅ | ❌ | Direct support for `@forelse ... @empty ... @endforelse` |
 | 🎯 **Conditional Classes (`@class`)** | ✅ | ❌ | Directive for dynamic CSS class lists |
 | 🔐 **Form Directives (`@csrf`, `@method`)** | ✅ | ❌ | Built-in form helpers |
+| 🛡️ **Native Try/Catch Error Handling** | ✅ | ❌ | First-class `try/catch` with `$error` injection |
 | 🔌 **Native C-ABI Dynamic Plugins (`.so`)** | ✅ | ❌ | Load `.so`/`.dylib` Rust extensions at runtime |
 | 🧰 **Built-in Utility Suite** | ✅ | ❌ | 50+ built-in math, string, array, map slots |
 | 📄 **OpenAPI / Swagger UI Integration** | ✅ | ❌ | Bundled `zeno-apidoc` crate |
@@ -84,9 +86,9 @@ Add `zenoengine` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-zenoengine = "0.2.2"   # batteries-included facade
-zenocore   = "0.2.2"   # core engine + plugin system
-zeno-blade  = "0.2.2"  # or just the Blade engine
+zenoengine = "0.2.3"   # batteries-included facade
+zenocore   = "0.2.3"   # core engine + plugin system
+zeno-blade = "0.2.3"   # or just the Blade engine
 ```
 
 ### 2. Render Blade Templates in Rust
@@ -136,13 +138,81 @@ println!("{}", html.0.lock().unwrap()); // Rendered HTML output
 
 ---
 
+## 🛡️ Try/Catch Error Handling
+
+> **New in v0.2.3** — Native `try/catch` slot built into `zenocore`.
+
+ZenoLang now includes a first-class `try` slot for safe, graceful error handling in any `.zl` script. When execution inside the `run` block fails, the engine automatically populates the `$error` variable with the diagnostic message and jumps to the `catch` block — without crashing the process.
+
+### Syntax
+
+```yaml
+try: {
+    run: {
+        # Code that may fail
+        io.file.read: '/etc/config.json' { as: $config }
+        json.parse: $config { as: $data }
+    }
+    catch: {
+        # $error is automatically set to the error message
+        log: "Caught error: ${error}"
+        http.bad_request: { success: false, message: "Config load failed: ${error}" }
+    }
+}
+```
+
+### How It Works
+
+| Behavior | Detail |
+|---|---|
+| **`run` block** | All statements executed in sequence; stops at the first error |
+| **`catch` block** | Executed only when `run` fails; skipped on success |
+| **`$error` variable** | Automatically set to the `Diagnostic.message` string |
+| **Propagation** | Errors in `catch` itself will propagate normally |
+| **Nesting** | `try` blocks can be nested inside other `try` blocks |
+
+### Examples
+
+**File I/O with fallback:**
+```yaml
+try: {
+    run: {
+        io.file.read: $config_path { as: $raw }
+        json.parse: $raw { as: $cfg }
+    }
+    catch: {
+        log: "Warning: using defaults — ${error}"
+        var: $cfg { val: { debug: true } }
+    }
+}
+```
+
+**Database operation with error response:**
+```yaml
+try: {
+    run: {
+        db.select: "SELECT * FROM users WHERE id = ?" {
+            bind: [$user_id]
+            first: true
+            as: $user
+        }
+        http.ok: { data: $user }
+    }
+    catch: {
+        http.bad_request: { success: false, message: "Database error: ${error}" }
+    }
+}
+```
+
+---
+
 ## 🔌 Native Rust Dynamic Plugins (`.so` / `.dylib` / `.dll`)
 
 `zeno-rs` includes a **Native Dynamic Plugin System** — one of ZenoLang's most powerful features. You can compile custom Rust code into a shared library (`.so`, `.dylib`, `.dll`) and load it dynamically into ZenoCore **at runtime**, without recompiling the core engine.
 
 ### Plugin Support in ZenoLang
 
-As of `v0.2.2`, ZenoLang fully supports native plugins with:
+As of `v0.2.3`, ZenoLang fully supports native plugins with:
 
 | Capability | Description |
 |---|---|
@@ -191,11 +261,9 @@ log: $hash
 ### 3. Multiple Plugins in One Script
 
 ```yaml
-# You can load multiple plugins in the same session
 plugin.load: './plugins/libimage_processor.so'
 plugin.load: './plugins/libpayment_gateway.so'
 
-# Each plugin registers its own named slots
 image.resize: $original_path {
     width: 800
     height: 600
@@ -264,13 +332,14 @@ In development, `zeno-blade` checks the `mtime` timestamp of template files on e
 
 ## 🧰 Built-in Slots Suite
 
-ZenoCore includes 50+ built-in slots:
+ZenoCore includes **50+ built-in slots** across 5 categories:
 
-- **Logic**: `if` (`&&`, `||`, `==`, `!=`, `>`, `<`, `>=`, `<=`), `for`, `while`, `try`, `var`
+- **Logic**: `if` (`&&`, `||`, `==`, `!=`, `>`, `<`, `>=`, `<=`), `for`, `while`, `var`, `fn`, `call`
+- **Error Handling**: `try` / `catch` with `$error` injection *(new in v0.2.3)*
 - **String**: `string.trim`, `upper`, `lower`, `split`, `replace`, `contains`, `starts_with`, `ends_with`, `len`, `concat`, `substr`, `format`
 - **Math**: `math.add`, `sub`, `mul`, `div`, `mod`, `pow`, `sqrt`, `abs`, `ceil`, `floor`, `round`, `min`, `max`, `clamp`, `random`
 - **Collections**: `array.push`, `pop`, `shift`, `unshift`, `slice`, `reverse`, `sort`, `unique`, `contains`, `map.set`, `get`, `delete`, `merge`, `keys`, `values`, `has`, `entries`
-- **Utilities**: `log`, `print`, `coalesce`, `cast.to_int/float/string/bool`, `include`, `util.datetime`, `util.timestamp`, `util.uuid`, `util.env`
+- **Utilities**: `log`, `print`, `coalesce`, `cast.to_int/float/string/bool`, `include`, `json.parse`, `json.stringify`, `util.datetime`, `util.timestamp`, `util.uuid`, `util.env`, `time.sleep`
 
 ---
 
@@ -283,11 +352,26 @@ cd zeno-rs
 # Build plugin example
 cargo build --package zeno-plugin-example
 
-# Run workspace unit tests
+# Run workspace unit tests (includes try/catch tests)
 cargo test
 ```
 
 **Requirements:** Rust **1.85+** (Edition 2024)
+
+---
+
+## 📋 Changelog
+
+### v0.2.3 *(latest)*
+- ✨ **New**: Native `try/catch` slot in `zenocore` with `run`/`catch` block syntax
+- ✨ **New**: `$error` variable automatically injected on failure
+- ✅ Added 3 unit tests for try/catch behavior
+- 🔢 Bump all crates to `0.2.3`
+
+### v0.2.2
+- Native dynamic plugin system (`.so`/`.dylib`/`.dll`)
+- Full Blade component & layout inheritance support
+- OpenAPI/Swagger UI via `zeno-apidoc`
 
 ---
 
