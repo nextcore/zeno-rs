@@ -1,6 +1,6 @@
 [package]
 name = "zeno-std"
-version = "0.2.0"
+version = "0.2.2"
 edition = "2024"
 description = "Standard library for zeno-rs — math, date, string, and money utilities for ZenoLang templates"
 license = "Apache-2.0"
