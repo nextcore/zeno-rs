@@ -127,15 +127,24 @@ impl Engine {
             None => return Value::Nil,
         };
 
-        // C. Check String Literal (double or single quotes)
+        // C. Check String Literal (double or single quotes or contains ${)
+        if val_str.contains("${") {
+            let clean_str = if val_str.len() >= 2 && (
+                (val_str.starts_with('"') && val_str.ends_with('"')) ||
+                (val_str.starts_with('\'') && val_str.ends_with('\''))
+            ) {
+                &val_str[1..val_str.len() - 1]
+            } else {
+                &val_str
+            };
+            return Value::String(interpolate_str(clean_str, scope));
+        }
+
         if val_str.len() >= 2 && (
             (val_str.starts_with('"') && val_str.ends_with('"')) ||
             (val_str.starts_with('\'') && val_str.ends_with('\''))
         ) {
             let inner = &val_str[1..val_str.len() - 1];
-            if inner.contains("${") {
-                return Value::String(interpolate_str(inner, scope));
-            }
             return Value::String(inner.to_string());
         }
 
