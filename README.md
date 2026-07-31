@@ -7,6 +7,7 @@
 <img src="https://img.shields.io/badge/tests-30%2F30%20passing-brightgreen?style=for-the-badge" />
 <img src="https://img.shields.io/badge/Blade-compatible-blueviolet?style=for-the-badge" />
 <img src="https://img.shields.io/badge/plugins-native%20C--ABI-ff6b35?style=for-the-badge" />
+<img src="https://img.shields.io/badge/benchmark-33.4k%20RPS-brightgreen?style=for-the-badge" />
 
 # ⚡ zeno-rs
 
@@ -14,7 +15,7 @@
 
 > Write familiar `@if`, `@foreach`, `@extends`, `{{ $var }}`, and `<x-component>` Blade templates — executed directly at native Rust speed.
 
-[Overview](#-overview) · [vs Tera](#-zeno-blade-vs-tera) · [Quickstart](#-quickstart) · [Try/Catch](#-trycatch-error-handling) · [Native Plugins](#-native-rust-dynamic-plugins-so--dylib--dll) · [Blade Reference](#-blade-directives) · [Components](#-html-components) · [Hot Reload](#%EF%B8%8F-template-loading--hot-reload)
+[Overview](#-overview) · [Benchmarks](#-web-framework-benchmarks) · [vs Tera](#-zeno-blade-vs-tera) · [Quickstart](#-quickstart) · [Try/Catch](#-trycatch-error-handling) · [Native Plugins](#-native-rust-dynamic-plugins-so--dylib--dll) · [Blade Reference](#-blade-directives) · [Components](#-html-components) · [Hot Reload](#%EF%B8%8F-template-loading--hot-reload)
 
 </div>
 
@@ -32,6 +33,22 @@
 - **Native Try/Catch Error Handling**: First-class `try/catch` slot for safe execution with `$error` variable injection (new in `v0.2.3`).
 - **Native Dynamic Plugin System**: Load compiled Rust shared libraries (`.so`, `.dylib`, `.dll`) at runtime via FFI without recompiling the core engine.
 - **Lightweight Footprint**: Single binary deployment with minimal memory consumption (~2-5 MB under load).
+
+---
+
+## 🚀 Web Framework Benchmarks
+
+`zeno-rs` is officially submitted to [the-benchmarker/web-frameworks](https://github.com/the-benchmarker/web-frameworks/pull/9606). Executing dynamic `.zl` script templates yields **higher throughput** than raw native framework implementations thanks to pre-parsed AST caching and direct response assembly.
+
+### Benchmark Results (Local Test Suite)
+
+| Framework / Engine | Runtime Engine | `GET /` | `POST /user` | `GET /user/{id}` |
+| :--- | :--- | :---: | :---: | :---: |
+| **`zeno-rs-actix`** | ZenoLang (`.zl`) + Actix | **33,449 req/s** | **32,909 req/s** | **31,717 req/s** |
+| **`zeno-rs-axum`** | ZenoLang (`.zl`) + Axum | **30,299 req/s** | **31,393 req/s** | **28,494 req/s** |
+| **Raw Axum (Official)** | Native Rust (axum) | 26,422 req/s | 25,951 req/s | 26,525 req/s |
+
+> ⚡ **Performance Highlight:** `zeno-rs` delivers up to **+26.8% higher throughput** compared to raw Axum while executing dynamic `.zl` logic.
 
 ---
 
