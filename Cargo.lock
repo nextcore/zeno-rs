@@ -1202,7 +1202,7 @@ dependencies = [
 
 [[package]]
 name = "zeno-blade"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "zenocore 0.2.3",
 ]
@@ -1259,7 +1259,7 @@ dependencies = [
 
 [[package]]
 name = "zenoengine"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "zeno-apidoc 0.2.3",
  "zeno-blade",

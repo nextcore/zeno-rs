@@ -17,45 +17,35 @@ fn find_balanced_paren(s: &str) -> Option<usize> {
 
 fn find_end_forelse(s: &str) -> Option<usize> {
     let mut depth = 0;
-    let mut pos = 0;
-    let bytes = s.as_bytes();
-    while pos < bytes.len() {
-        if s[pos..].starts_with("@forelse") {
+    for (i, _) in s.char_indices() {
+        let rest = &s[i..];
+        if rest.starts_with("@forelse") {
             depth += 1;
-            pos += 8;
-        } else if s[pos..].starts_with("@endforelse") {
+        } else if rest.starts_with("@endforelse") {
             if depth == 0 {
-                return Some(pos);
+                return Some(i);
             }
             depth -= 1;
-            pos += 11;
-        } else {
-            pos += 1;
         }
     }
     None
 }
 
 fn find_end_component(s: &str, tag_name: &str) -> Option<usize> {
-    let closing = format!("</{}", tag_name);
+    let closing = format!("</{}>", tag_name);
     let start = format!("<{}", tag_name);
     
     let mut depth = 0;
-    let mut pos = 0;
-    let bytes = s.as_bytes();
     
-    while pos < bytes.len() {
-        if s[pos..].starts_with(&start) {
+    for (i, _) in s.char_indices() {
+        let rest = &s[i..];
+        if rest.starts_with(&start) {
             depth += 1;
-            pos += start.len();
-        } else if s[pos..].starts_with(&closing) {
+        } else if rest.starts_with(&closing) {
             if depth == 0 {
-                return Some(pos);
+                return Some(i);
             }
             depth -= 1;
-            pos += closing.len();
-        } else {
-            pos += 1;
         }
     }
     None
@@ -125,20 +115,15 @@ fn parse_blade_attributes(raw: &str, filename: &str) -> Vec<Node> {
 
 fn find_end_directive(s: &str, start_dir: &str, end_dir: &str) -> Option<usize> {
     let mut depth = 0;
-    let mut pos = 0;
-    let bytes = s.as_bytes();
-    while pos < bytes.len() {
-        if s[pos..].starts_with(start_dir) {
+    for (i, _) in s.char_indices() {
+        let rest = &s[i..];
+        if rest.starts_with(start_dir) {
             depth += 1;
-            pos += start_dir.len();
-        } else if s[pos..].starts_with(end_dir) {
+        } else if rest.starts_with(end_dir) {
             if depth == 0 {
-                return Some(pos);
+                return Some(i);
             }
             depth -= 1;
-            pos += end_dir.len();
-        } else {
-            pos += 1;
         }
     }
     None
@@ -146,24 +131,17 @@ fn find_end_directive(s: &str, start_dir: &str, end_dir: &str) -> Option<usize> 
 
 fn find_end_if(s: &str) -> Option<(usize, &'static str)> {
     let mut depth = 0;
-    let mut pos = 0;
-    while pos < s.len() {
-        if s[pos..].starts_with("@if") {
+    for (i, _) in s.char_indices() {
+        let rest = &s[i..];
+        if rest.starts_with("@if") {
             depth += 1;
-            pos += 3;
-        } else if s[pos..].starts_with("@endif") {
+        } else if rest.starts_with("@endif") {
             if depth == 0 {
-                return Some((pos, "endif"));
+                return Some((i, "endif"));
             }
             depth -= 1;
-            pos += 6;
-        } else if s[pos..].starts_with("@else") {
-            if depth == 0 {
-                return Some((pos, "else"));
-            }
-            pos += 5;
-        } else {
-            pos += 1;
+        } else if rest.starts_with("@else") && depth == 0 {
+            return Some((i, "else"));
         }
     }
     None
@@ -705,22 +683,18 @@ pub fn transpile_blade_native(content: &str, filename: &str) -> Result<Node, Str
                     // Custom scan for @empty
                     let mut empty_pos = None;
                     let mut d = 0;
-                    let mut scan_pos = 0;
-                    let bytes = full_block_content.as_bytes();
-                    while scan_pos < bytes.len() {
-                        if full_block_content[scan_pos..].starts_with("@empty") {
+                    'scan: for (scan_pos, _) in full_block_content.char_indices() {
+                        let rest = &full_block_content[scan_pos..];
+                        if rest.starts_with("@empty") {
                             if d == 0 {
                                 empty_pos = Some(scan_pos);
-                                break;
+                                break 'scan;
                             }
-                        } else if full_block_content[scan_pos..].starts_with("@foreach") 
-                            || full_block_content[scan_pos..].starts_with("@forelse") {
+                        } else if rest.starts_with("@foreach") || rest.starts_with("@forelse") {
                             d += 1;
-                        } else if full_block_content[scan_pos..].starts_with("@endforeach") 
-                            || full_block_content[scan_pos..].starts_with("@endforelse") {
+                        } else if rest.starts_with("@endforeach") || rest.starts_with("@endforelse") {
                             d -= 1;
                         }
-                        scan_pos += 1;
                     }
                     
                     let (body_content, empty_content) = match empty_pos {
