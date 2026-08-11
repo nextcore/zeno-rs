@@ -816,6 +816,56 @@ pub fn transpile_blade_native(content: &str, filename: &str) -> Result<Node, Str
             } else {
                 pos += 7;
             }
+        } else if content[pos..].starts_with("@empty") {
+            let start_paren = content[pos..].find('(');
+            let end_paren = find_balanced_paren(&content[pos..]);
+            if let (Some(sp), Some(ep)) = (start_paren, end_paren) {
+                let cond_raw = content[pos + sp + 1..pos + ep].trim().to_string();
+                let block_start = pos + ep + 1;
+                if let Some(block_end) = find_end_directive(&content[block_start..], "@empty", "@endempty") {
+                    let body_content = &content[block_start..block_start + block_end];
+                    let body_node = transpile_blade_native(body_content, filename)?;
+                    
+                    root.children.push(Node {
+                        name: "empty".to_string(),
+                        value: Some(cond_raw),
+                        children: body_node.children,
+                        line: 1,
+                        col: 1,
+                        filename: filename.to_string(),
+                    });
+                    pos = block_start + block_end + 10;
+                } else {
+                    return Err("unclosed @empty".to_string());
+                }
+            } else {
+                pos += 6;
+            }
+        } else if content[pos..].starts_with("@isset") {
+            let start_paren = content[pos..].find('(');
+            let end_paren = find_balanced_paren(&content[pos..]);
+            if let (Some(sp), Some(ep)) = (start_paren, end_paren) {
+                let cond_raw = content[pos + sp + 1..pos + ep].trim().to_string();
+                let block_start = pos + ep + 1;
+                if let Some(block_end) = find_end_directive(&content[block_start..], "@isset", "@endisset") {
+                    let body_content = &content[block_start..block_start + block_end];
+                    let body_node = transpile_blade_native(body_content, filename)?;
+                    
+                    root.children.push(Node {
+                        name: "isset".to_string(),
+                        value: Some(cond_raw),
+                        children: body_node.children,
+                        line: 1,
+                        col: 1,
+                        filename: filename.to_string(),
+                    });
+                    pos = block_start + block_end + 9;
+                } else {
+                    return Err("unclosed @isset".to_string());
+                }
+            } else {
+                pos += 6;
+            }
         } else if content[pos..].starts_with("@if") {
             let start_paren = content[pos..].find('(');
             let end_paren = find_balanced_paren(&content[pos..]);
@@ -850,7 +900,7 @@ pub fn transpile_blade_native(content: &str, filename: &str) -> Result<Node, Str
                     } else {
                         pos = block_start + block_end + 6;
                     }
-
+ 
                     let mut if_children = vec![Node {
                         name: "then".to_string(),
                         value: None,
@@ -862,7 +912,7 @@ pub fn transpile_blade_native(content: &str, filename: &str) -> Result<Node, Str
                     if let Some(en) = else_node {
                         if_children.push(en);
                     }
-
+ 
                     root.children.push(Node {
                         name: "if".to_string(),
                         value: Some(cond_raw),
@@ -894,7 +944,8 @@ pub fn transpile_blade_native(content: &str, filename: &str) -> Result<Node, Str
                 return Err("unclosed @zeno".to_string());
             }
         } else {
-            let c = &content[pos..pos + 1];
+            let ch = content[pos..].chars().next().unwrap();
+            let c = &content[pos..pos + ch.len_utf8()];
             root.children.push(Node {
                 name: "__native_write".to_string(),
                 value: Some(c.to_string()),
@@ -903,7 +954,7 @@ pub fn transpile_blade_native(content: &str, filename: &str) -> Result<Node, Str
                 col: 1,
                 filename: filename.to_string(),
             });
-            pos += 1;
+            pos += ch.len_utf8();
         }
     }
 

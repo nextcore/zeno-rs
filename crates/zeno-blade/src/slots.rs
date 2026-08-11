@@ -550,6 +550,117 @@ pub fn register_blade_slots(eng: &mut Engine) {
             value_type: "any".to_string(),
         },
     );
+
+    // 13. text
+    eng.register(
+        "text",
+        Arc::new(|_engine, ctx, node, scope| {
+            if let Some(ref val) = node.value {
+                let resolved_val = if val.starts_with('$') {
+                    let key = &val[1..];
+                    scope.get(key).unwrap_or(Value::String(val.clone()))
+                } else {
+                    Value::String(val.clone())
+                };
+                if let Some(buf) = ctx.get::<HtmlBuffer>("httpWriter") {
+                    let mut guard = buf.0.lock().unwrap();
+                    guard.push_str(&resolved_val.to_string_coerce());
+                }
+            }
+            Ok(())
+        }),
+        SlotMeta {
+            description: "Writes raw string value to output buffer".to_string(),
+            example: "text: 'hello'".to_string(),
+            inputs: HashMap::new(),
+            required_blocks: Vec::new(),
+            value_type: "any".to_string(),
+        },
+    );
+
+    // 14. isset
+    eng.register(
+        "isset",
+        Arc::new(|engine, ctx, node, scope| {
+            let var_name = node
+                .value
+                .clone()
+                .unwrap_or_default()
+                .trim()
+                .trim_start_matches('$')
+                .to_string();
+
+            let is_set = if let Some(val) = scope.get(&var_name) {
+                match val {
+                    Value::Nil => false,
+                    Value::String(s) => !s.is_empty(),
+                    Value::List(l) => !l.is_empty(),
+                    Value::Map(m) => !m.is_empty(),
+                    Value::Bool(b) => b,
+                    Value::Int(i) => i != 0,
+                    Value::Float(f) => f != 0.0,
+                }
+            } else {
+                false
+            };
+
+            if is_set {
+                for child in &node.children {
+                    engine.execute(ctx, child, scope)?;
+                }
+            }
+            Ok(())
+        }),
+        SlotMeta {
+            description: "Evaluates isset control block".to_string(),
+            example: "isset: $title { ... }".to_string(),
+            inputs: HashMap::new(),
+            required_blocks: Vec::new(),
+            value_type: "control".to_string(),
+        },
+    );
+
+    // 15. empty
+    eng.register(
+        "empty",
+        Arc::new(|engine, ctx, node, scope| {
+            let var_name = node
+                .value
+                .clone()
+                .unwrap_or_default()
+                .trim()
+                .trim_start_matches('$')
+                .to_string();
+
+            let is_empty = if let Some(val) = scope.get(&var_name) {
+                match val {
+                    Value::Nil => true,
+                    Value::String(s) => s.is_empty(),
+                    Value::List(l) => l.is_empty(),
+                    Value::Map(m) => m.is_empty(),
+                    Value::Bool(b) => !b,
+                    Value::Int(i) => i == 0,
+                    Value::Float(f) => f == 0.0,
+                }
+            } else {
+                true
+            };
+
+            if is_empty {
+                for child in &node.children {
+                    engine.execute(ctx, child, scope)?;
+                }
+            }
+            Ok(())
+        }),
+        SlotMeta {
+            description: "Evaluates empty control block".to_string(),
+            example: "empty: $items { ... }".to_string(),
+            inputs: HashMap::new(),
+            required_blocks: Vec::new(),
+            value_type: "control".to_string(),
+        },
+    );
 }
 
 #[cfg(test)]
